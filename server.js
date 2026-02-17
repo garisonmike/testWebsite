@@ -25,18 +25,50 @@ db.exec(`
 `);
 
 // Middleware
-app.use(express.json());
-app.use(express.static('.'));
+app.use(express.json({ limit: '50kb' }));
 app.use(session({
-    secret: 'lab-secret-' + crypto.randomBytes(16).toString('hex'),
+    secret: process.env.SESSION_SECRET || 'lab-dev-secret-change-me',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 }
+    cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000
+    }
 }));
 
-// Hash password
-function hashPassword(password) {
-    return crypto.createHash('sha256').update(password).digest('hex');
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    next();
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/app.js', (req, res) => {
+    res.type('application/javascript');
+    res.sendFile(path.join(__dirname, 'app.js'));
+});
+
+function createPasswordHash(password) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+    return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedPassword) {
+    if (!storedPassword.includes(':')) {
+        const legacyHash = crypto.createHash('sha256').update(password).digest('hex');
+        return storedPassword === legacyHash;
+    }
+
+    const [salt, hash] = storedPassword.split(':');
+    const candidate = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(candidate, 'hex'));
 }
 
 // Routes
@@ -47,9 +79,18 @@ app.post('/api/signup', (req, res) => {
         return res.status(400).json({ error: 'Username and password required' });
     }
 
+    if (typeof username !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    const cleanUsername = username.trim();
+    if (cleanUsername.length < 3 || cleanUsername.length > 40 || password.length < 4) {
+        return res.status(400).json({ error: 'Invalid username or password length' });
+    }
+
     try {
-        const hashedPassword = hashPassword(password);
-        const result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashedPassword);
+        const hashedPassword = createPasswordHash(password);
+        const result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(cleanUsername, hashedPassword);
         req.session.userId = result.lastInsertRowid;
         res.json({ success: true });
     } catch (e) {
@@ -68,10 +109,14 @@ app.post('/api/login', (req, res) => {
         return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const hashedPassword = hashPassword(password);
-    const user = db.prepare('SELECT id FROM users WHERE username = ? AND password = ?').get(username, hashedPassword);
+    if (typeof username !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ error: 'Invalid input' });
+    }
 
-    if (user) {
+    const cleanUsername = username.trim();
+    const user = db.prepare('SELECT id, password FROM users WHERE username = ?').get(cleanUsername);
+
+    if (user && verifyPassword(password, user.password)) {
         req.session.userId = user.id;
         res.json({ success: true });
     } else {
@@ -89,8 +134,10 @@ app.get('/api/session', (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-    req.session.destroy();
-    res.json({ success: true });
+    req.session.destroy(() => {
+        res.clearCookie('connect.sid');
+        res.json({ success: true });
+    });
 });
 
 app.post('/api/config', (req, res) => {
@@ -100,17 +147,28 @@ app.post('/api/config', (req, res) => {
 
     const { os, webServer } = req.body;
 
-    if (!os || !webServer) {
+    if (!os || !webServer || typeof os !== 'string' || typeof webServer !== 'string') {
         return res.status(400).json({ error: 'OS and Web Server required' });
     }
 
-    // Delete old config
-    db.prepare('DELETE FROM configs WHERE user_id = ?').run(req.session.userId);
+    const cleanOs = os.trim().slice(0, 80);
+    const cleanWebServer = webServer.trim().slice(0, 80);
 
-    // Insert new config
-    db.prepare('INSERT INTO configs (user_id, os, web_server) VALUES (?, ?, ?)').run(req.session.userId, os, webServer);
+    if (!cleanOs || !cleanWebServer) {
+        return res.status(400).json({ error: 'OS and Web Server required' });
+    }
 
-    res.json({ os, webServer });
+    try {
+        // Delete old config
+        db.prepare('DELETE FROM configs WHERE user_id = ?').run(req.session.userId);
+
+        // Insert new config
+        db.prepare('INSERT INTO configs (user_id, os, web_server) VALUES (?, ?, ?)').run(req.session.userId, cleanOs, cleanWebServer);
+
+        res.json({ os: cleanOs, webServer: cleanWebServer });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 app.get('/api/config', (req, res) => {

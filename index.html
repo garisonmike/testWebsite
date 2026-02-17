@@ -174,13 +174,22 @@
                     <option value="Kali Linux">Kali Linux</option>
                     <option value="Ubuntu Desktop">Ubuntu Desktop</option>
                     <option value="Windows 10">Windows 10</option>
+                    <option value="Other">Other (Specify)</option>
                 </select>
+            </div>
+            <div class="form-group hidden" id="osOtherGroup" style="display: none;">
+                <label>Specify OS</label>
+                <input type="text" id="osOther" placeholder="Enter your OS">
             </div>
             <div class="form-group">
                 <label>Web Server</label>
                 <select id="webServerSelect">
                     <option value="">Select Web Server</option>
                 </select>
+            </div>
+            <div class="form-group" id="webServerOtherGroup" style="display: none;">
+                <label>Specify Web Server</label>
+                <input type="text" id="webServerOther" placeholder="Enter your web server">
             </div>
             <button onclick="saveConfig()">Save Configuration</button>
         </div>

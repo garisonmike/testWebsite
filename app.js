@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000';
+const API_URL = '';
 
 // Check session on load
 window.onload = async () => {
@@ -10,7 +10,7 @@ window.onload = async () => {
 
 async function checkSession() {
     try {
-        const res = await fetch(`${API_URL}/api/session`, { credentials: 'include' });
+        const res = await fetch(`${API_URL}/api/session`, { credentials: 'same-origin' });
         if (res.ok) {
             const data = await res.json();
             return data.user;
@@ -42,7 +42,7 @@ async function signup() {
         const res = await fetch(`${API_URL}/api/signup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            credentials: 'same-origin',
             body: JSON.stringify({ username, password })
         });
 
@@ -70,7 +70,7 @@ async function login() {
         const res = await fetch(`${API_URL}/api/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            credentials: 'same-origin',
             body: JSON.stringify({ username, password })
         });
 
@@ -86,7 +86,7 @@ async function login() {
 
 async function loadConfig() {
     try {
-        const res = await fetch(`${API_URL}/api/config`, { credentials: 'include' });
+        const res = await fetch(`${API_URL}/api/config`, { credentials: 'same-origin' });
         if (res.ok) {
             const data = await res.json();
             if (data.os && data.webServer) {
@@ -103,24 +103,55 @@ async function loadConfig() {
 function updateWebServers() {
     const os = document.getElementById('osSelect').value;
     const webServerSelect = document.getElementById('webServerSelect');
+    const osOtherGroup = document.getElementById('osOtherGroup');
+
+    // Show/hide OS other input
+    if (os === 'Other') {
+        osOtherGroup.style.display = 'block';
+    } else {
+        osOtherGroup.style.display = 'none';
+    }
+
     webServerSelect.innerHTML = '<option value="">Select Web Server</option>';
 
     if (os.includes('Windows')) {
         webServerSelect.innerHTML += '<option value="IIS">IIS</option>';
         webServerSelect.innerHTML += '<option value="Apache">Apache</option>';
         webServerSelect.innerHTML += '<option value="Nginx">Nginx</option>';
-    } else {
+    } else if (os) {
         webServerSelect.innerHTML += '<option value="Apache">Apache</option>';
         webServerSelect.innerHTML += '<option value="Nginx">Nginx</option>';
     }
+    webServerSelect.innerHTML += '<option value="Other">Other (Specify)</option>';
+
+    // Add listener for web server selection
+    webServerSelect.onchange = function () {
+        const webServerOtherGroup = document.getElementById('webServerOtherGroup');
+        if (webServerSelect.value === 'Other') {
+            webServerOtherGroup.style.display = 'block';
+        } else {
+            webServerOtherGroup.style.display = 'none';
+        }
+    };
+
+    const webServerOtherGroup = document.getElementById('webServerOtherGroup');
+    webServerOtherGroup.style.display = 'none';
 }
 
 async function saveConfig() {
-    const os = document.getElementById('osSelect').value;
-    const webServer = document.getElementById('webServerSelect').value;
+    let os = document.getElementById('osSelect').value;
+    let webServer = document.getElementById('webServerSelect').value;
+
+    // Get custom values if "Other" is selected
+    if (os === 'Other') {
+        os = document.getElementById('osOther').value;
+    }
+    if (webServer === 'Other') {
+        webServer = document.getElementById('webServerOther').value;
+    }
 
     if (!os || !webServer) {
-        alert('Please select both OS and Web Server');
+        alert('Please select/enter both OS and Web Server');
         return;
     }
 
@@ -128,7 +159,7 @@ async function saveConfig() {
         const res = await fetch(`${API_URL}/api/config`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            credentials: 'same-origin',
             body: JSON.stringify({ os, webServer })
         });
 
@@ -136,7 +167,8 @@ async function saveConfig() {
             const data = await res.json();
             showSuccessView(data);
         } else {
-            alert('Error saving configuration');
+            const error = await res.json().catch(() => ({ error: 'Unknown error' }));
+            alert('Error saving configuration: ' + (error.error || 'Please try again'));
         }
     } catch (e) {
         alert('Error: ' + e.message);
@@ -169,7 +201,7 @@ async function logout() {
     try {
         await fetch(`${API_URL}/api/logout`, {
             method: 'POST',
-            credentials: 'include'
+            credentials: 'same-origin'
         });
         location.reload();
     } catch (e) {
