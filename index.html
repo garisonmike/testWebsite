@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Hosting Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #3d2f2a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid #3a3a3a;
+        }
+
+        h1 {
+            color: #d4a574;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #b8956a;
+            font-size: 18px;
+            margin: 20px 0 15px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #9a9a9a;
+            font-size: 14px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #1f1f1f;
+            color: #d4d4d4;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #8b6f47;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #a3834f;
+        }
+
+        .link-btn {
+            background: none;
+            color: #b8956a;
+            text-decoration: underline;
+            padding: 5px;
+            margin-top: 5px;
+        }
+
+        3d311f;
+        color: #d4a574;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid #5a4a35;
+        }
+
+        .success h2 {
+            color: #d4a574;
+            margin: 10px 0;
+        }
+
+        .info {
+            background: #1f1f1f;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #8b6f47;
+            color: #b8b8b8;
+        }
+
+        .logout-btn {
+            background: #1a1a1a;
+            margin-top: 20px;
+            border: 1px solid #3a3a3a;
+        }
+
+        .logout-btn:hover {
+            background: #0a0a0a .logout-btn:hover {
+                background: #dc2626;
+            }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Auth View -->
+        <div id="authView">
+            <h1>Welcome</h1>
+            <div id="loginForm">
+                <h2>Sign In</h2>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button onclick="login()">Sign In</button>
+                <button class="link-btn" onclick="showSignup()">Create Account</button>
+            </div>
+
+            <div id="signupForm" class="hidden">
+                <h2>Sign Up</h2>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="signupUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signupPassword" required>
+                </div>
+                <button onclick="signup()">Create Account</button>
+                <button class="link-btn" onclick="showLogin()">Back to Sign In</button>
+            </div>
+        </div>
+
+        <!-- Setup View -->
+        <div id="setupView" class="hidden">
+            <h1>Server Configuration</h1>
+            <div class="form-group">
+                <label>Operating System</label>
+                <select id="osSelect" onchange="updateWebServers()">
+                    <option value="">Select OS</option>
+                    <option value="Windows Server">Windows Server</option>
+                    <option value="Ubuntu Server">Ubuntu Server</option>
+                    <option value="Kali Linux">Kali Linux</option>
+                    <option value="Ubuntu Desktop">Ubuntu Desktop</option>
+                    <option value="Windows 10">Windows 10</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Web Server</label>
+                <select id="webServerSelect">
+                    <option value="">Select Web Server</option>
+                </select>
+            </div>
+            <button onclick="saveConfig()">Save Configuration</button>
+        </div>
+
+        <!-- Success View -->
+        <div id="successView" class="hidden">
+            <div class="success">
+                <h1>🎉 Congratulations!</h1>
+                <h2>Your server is running successfully</h2>
+            </div>
+            <div class="info">
+                <strong>Environment Details:</strong>
+                <div id="configDetails" style="margin-top: 10px; color: #b8b8b8;"></div>
+            </div>
+            <button onclick="editConfig()">Change Configuration</button>
+            <button class="logout-btn" onclick="logout()">Sign Out</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
